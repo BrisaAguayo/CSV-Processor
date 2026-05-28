@@ -311,6 +311,149 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .hidden { display: none; }
+
+    /* ── Dashboard ───────────────────────────────────── */
+    .dashboard {
+      width: 100%;
+      max-width: 860px;
+      margin-top: 48px;
+      animation: fadeIn 0.5s ease both;
+    }
+
+    .dashboard-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dashboard-title i { font-size: 16px; color: #185FA5; }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: #38A169;
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 4px;
+      animation: blink 1.2s ease infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    .dash-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px 20px;
+    }
+
+    .dash-card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .dash-worker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f7fafc;
+    }
+
+    .dash-worker-row:last-child { border-bottom: none; }
+
+    .dash-worker-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #2d3748;
+    }
+
+    .dash-worker-num {
+      width: 22px;
+      height: 22px;
+      background: #E6F1FB;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #185FA5;
+    }
+
+    .queue-count {
+      font-size: 36px;
+      font-weight: 700;
+      color: #185FA5;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .queue-label { font-size: 12px; color: #a0aec0; }
+
+    .log-list {
+      max-height: 160px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    .log-time {
+      font-size: 10px;
+      color: #a0aec0;
+      white-space: nowrap;
+      padding-top: 1px;
+      font-family: monospace;
+    }
+
+    .log-worker {
+      font-size: 10px;
+      font-weight: 600;
+      color: #185FA5;
+      background: #EBF5FF;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .log-msg   { font-size: 11px; color: #4a5568; }
+    .log-empty { font-size: 12px; color: #a0aec0; text-align: center; padding: 20px 0; }
+    .status-inactivo { background: #F7FAFC; color: #A0AEC0; }
   </style>
 </head>
 <body>
@@ -392,6 +535,43 @@
     <button class="btn-blue" id="save-btn">
       <i class="ti ti-device-floppy"></i> Guardar resultado
     </button>
+  </div>
+
+  <!-- ── Dashboard en tiempo real ─────────────────────── -->
+  <div class="dashboard" id="dashboard">
+    <p class="dashboard-title">
+      <i class="ti ti-layout-dashboard"></i>
+      Dashboard en tiempo real
+      <span class="live-dot"></span>
+    </p>
+    <div class="dashboard-grid">
+
+      <div class="dash-card" style="grid-column: 1 / -1;">
+        <p class="dash-card-title"><i class="ti ti-cpu"></i> Estado de workers</p>
+        <div style="display:grid; grid-template-columns: repeat(3,1fr); gap: 12px;">
+          <div class="dash-worker-row" style="border:none; flex-direction:column; align-items:flex-start; gap:6px;">
+            <span class="dash-worker-name"><span class="dash-worker-num">1</span> Promedios</span>
+            <span class="status-badge status-inactivo" id="dash-badge-promedios">inactivo</span>
+          </div>
+          <div class="dash-worker-row" style="border:none; flex-direction:column; align-items:flex-start; gap:6px;">
+            <span class="dash-worker-name"><span class="dash-worker-num">2</span> Totales</span>
+            <span class="status-badge status-inactivo" id="dash-badge-totales">inactivo</span>
+          </div>
+          <div class="dash-worker-row" style="border:none; flex-direction:column; align-items:flex-start; gap:6px;">
+            <span class="dash-worker-name"><span class="dash-worker-num">3</span> Inválidos</span>
+            <span class="status-badge status-inactivo" id="dash-badge-invalidos">inactivo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-card" style="grid-column: 1 / -1;">
+        <p class="dash-card-title"><i class="ti ti-terminal"></i> Log de eventos</p>
+        <div class="log-list" id="dash-log">
+          <p class="log-empty">Esperando actividad...</p>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <div class="historial hidden" id="historial">
@@ -636,6 +816,48 @@
     }
 
     renderHistorial();
+
+    // ─── Dashboard SSE ────────────────────────────────────
+    let lastLogSnapshot = '';
+
+    function initDashboard() {
+      const dashSSE = new EventSource('http://localhost:8000/dashboard');
+
+      dashSSE.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        // Actualizar badges de workers en el dashboard
+        data.workers.forEach(w => {
+          const badge = document.getElementById(`dash-badge-${w.type}`);
+          if (!badge) return;
+          badge.className = `status-badge status-${w.status.replace(' ', '-')}`;
+          badge.innerHTML = w.status === 'en proceso'
+            ? `<span class="spinner"></span> en proceso`
+            : w.status;
+        });
+
+        // Log de eventos — solo re-renderiza si cambió algo
+        if (data.logs && data.logs.length > 0) {
+          const snapshot = JSON.stringify(data.logs);
+          if (snapshot !== lastLogSnapshot) {
+            lastLogSnapshot = snapshot;
+            const logList = document.getElementById('dash-log');
+            logList.innerHTML = data.logs.map(l => `
+              <div class="log-entry">
+                <span class="log-time">${l.time}</span>
+                <span class="log-worker">${l.worker}</span>
+                <span class="log-msg">${l.msg}</span>
+              </div>
+            `).join('');
+          }
+        }
+      };
+
+      // Si el backend no está corriendo, no romper la página
+      dashSSE.onerror = () => dashSSE.close();
+    }
+
+    initDashboard();
   </script>
 
 </body>
