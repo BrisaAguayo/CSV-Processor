@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+
+  worker1:
+    build: ./worker
+    environment:
+      - WORKER_ID=1
+      - WORKER_TYPE=promedios
+    depends_on:
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+
+  worker2:
+    build: ./worker
+    environment:
+      - WORKER_ID=2
+      - WORKER_TYPE=totales
+    depends_on:
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+
+  worker3:
+    build: ./worker
+    environment:
+      - WORKER_ID=3
+      - WORKER_TYPE=invalidos
+    depends_on:
+      - redis
+    volumes:
+      - uploads_data:/app/uploads
+
+volumes:
+  uploads_data:

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSV Processor</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      animation: fadeDown 0.5s ease both;
+    }
+
+    header i { font-size: 28px; color: #185FA5; }
+    header h1 { font-size: 24px; font-weight: 600; color: #1a202c; }
+
+    .subtitle {
+      font-size: 14px;
+      color: #718096;
+      margin-bottom: 32px;
+      animation: fadeDown 0.5s 0.1s ease both;
+    }
+
+    .upload-box {
+      background: white;
+      border: 2px dashed #e2e8f0;
+      border-radius: 16px;
+      padding: 36px;
+      text-align: center;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 32px;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      animation: fadeDown 0.5s 0.2s ease both;
+    }
+
+    .upload-box.dragover {
+      border-color: #185FA5;
+      background: #EBF5FF;
+      box-shadow: 0 0 0 4px #bee3f8;
+    }
+
+    /* Pulso en el ícono cuando se arrastra un archivo encima */
+    .upload-box.dragover .upload-icon {
+      animation: pulse 0.6s ease infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to   { transform: scale(1.15); }
+    }
+
+    .upload-box input[type="file"] { display: none; }
+    .upload-box label { cursor: pointer; display: block; }
+
+    .upload-icon {
+      font-size: 40px;
+      color: #185FA5;
+      display: block;
+      margin-bottom: 12px;
+      transition: transform 0.2s;
+    }
+
+    .upload-box p { font-size: 14px; color: #718096; margin-bottom: 4px; }
+    .upload-box .drag-hint { font-size: 12px; color: #a0aec0; margin-bottom: 6px; }
+
+    #file-name {
+      font-size: 13px;
+      color: #185FA5;
+      margin-top: 4px;
+      margin-bottom: 20px;
+    }
+
+    .btn-blue {
+      background: #185FA5;
+      color: white;
+      border: none;
+      padding: 11px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .btn-blue:hover:not(:disabled) {
+      background: #1a6fbf;
+      transform: translateY(-1px);
+    }
+
+    .btn-blue:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-blue:disabled { background: #cbd5e0; color: #a0aec0; cursor: not-allowed; }
+
+    .workers {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .worker-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .worker-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      background: #E6F1FB;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-icon i { font-size: 18px; color: #185FA5; }
+    .card-label { font-size: 11px; color: #718096; margin: 0; }
+    .card-title { font-size: 14px; font-weight: 600; color: #1a202c; margin: 0; }
+    .card-desc  { font-size: 11px; color: #a0aec0; margin: 3px 0 0; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .status-pendiente  { background: #EBF8FF; color: #2B6CB0; }
+    .status-en-proceso { background: #FFFBEB; color: #B45309; }
+    .status-completada { background: #F0FFF4; color: #276749; }
+    .status-error      { background: #FFF5F5; color: #9B2C2C; }
+
+    .result-box {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    .result-row:last-child { margin-bottom: 0; }
+    .result-label { font-size: 12px; color: #718096; }
+
+    .result-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #185FA5;
+    }
+
+    .result-value.warning { color: #B45309; }
+    .result-text { font-size: 12px; color: #718096; line-height: 1.6; }
+
+    .save-section { margin-top: 24px; text-align: center; }
+
+    .historial {
+      width: 100%;
+      max-width: 860px;
+      margin-top: 40px;
+    }
+
+    .historial-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .historial-title i { font-size: 16px; color: #185FA5; }
+
+    .historial-item {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .historial-item:hover {
+      border-color: #185FA5;
+      box-shadow: 0 0 0 3px #EBF5FF;
+    }
+
+    .historial-item.activo {
+      border-color: #185FA5;
+      background: #f0f7ff;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .historial-info p   { font-size: 13px; font-weight: 600; color: #1a202c; margin: 0 0 2px; }
+    .historial-info span { font-size: 11px; color: #a0aec0; }
+
+    .historial-right { display: flex; align-items: center; gap: 10px; }
+    .historial-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .historial-badge {
+      font-size: 11px;
+      background: #EBF5FF;
+      color: #185FA5;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .ver-btn {
+      font-size: 11px;
+      color: #185FA5;
+      background: #EBF5FF;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.2s;
+    }
+
+    .ver-btn:hover { background: #BEE3F8; }
+
+    .resultado-historial-label {
+      width: 100%;
+      max-width: 860px;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #a0aec0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #B45309;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <i class="ti ti-chart-bar"></i>
+    <h1>CSV Processor</h1>
+  </header>
+  <p class="subtitle">Procesamiento distribuido con Workers Docker</p>
+
+  <div class="upload-box" id="upload-box">
+    <label for="csv-input">
+      <i class="ti ti-file-text upload-icon"></i>
+      <p>Haz clic para seleccionar un archivo CSV</p>
+      <p class="drag-hint">o arrastra y suelta aquí</p>
+      <input type="file" id="csv-input" accept=".csv">
+      <div id="file-name">Ningún archivo seleccionado</div>
+    </label>
+    <button id="upload-btn" class="btn-blue" disabled>
+      <i class="ti ti-upload"></i> Procesar CSV
+    </button>
+  </div>
+
+  <div class="resultado-historial-label hidden" id="resultado-label">
+    <i class="ti ti-history" style="font-size:13px;"></i>
+    Mostrando resultado guardado
+  </div>
+
+  <div class="workers hidden" id="workers-section">
+
+    <div class="worker-card" id="card-promedios">
+      <div class="card-header">
+        <div class="card-icon"><i class="ti ti-math-avg"></i></div>
+        <div>
+          <p class="card-label">Worker 1</p>
+          <p class="card-title">Promedios</p>
+          <p class="card-desc">Calcula el promedio de cada columna numérica</p>
+        </div>
+      </div>
+      <span class="status-badge status-pendiente" id="badge-promedios">pendiente</span>
+      <div class="result-box" id="result-promedios">
+        <p class="result-text">Esperando tarea...</p>
+      </div>
+    </div>
+
+    <div class="worker-card" id="card-totales">
+      <div class="card-header">
+        <div class="card-icon"><i class="ti ti-sum"></i></div>
+        <div>
+          <p class="card-label">Worker 2</p>
+          <p class="card-title">Totales</p>
+          <p class="card-desc">Suma todos los valores de cada columna numérica</p>
+        </div>
+      </div>
+      <span class="status-badge status-pendiente" id="badge-totales">pendiente</span>
+      <div class="result-box" id="result-totales">
+        <p class="result-text">Esperando tarea...</p>
+      </div>
+    </div>
+
+    <div class="worker-card" id="card-invalidos">
+      <div class="card-header">
+        <div class="card-icon"><i class="ti ti-alert-triangle"></i></div>
+        <div>
+          <p class="card-label">Worker 3</p>
+          <p class="card-title">Inválidos</p>
+          <p class="card-desc">Detecta celdas vacías o con datos incorrectos</p>
+        </div>
+      </div>
+      <span class="status-badge status-pendiente" id="badge-invalidos">pendiente</span>
+      <div class="result-box" id="result-invalidos">
+        <p class="result-text">Esperando tarea...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="save-section hidden" id="save-section">
+    <button class="btn-blue" id="save-btn">
+      <i class="ti ti-device-floppy"></i> Guardar resultado
+    </button>
+  </div>
+
+  <div class="historial hidden" id="historial">
+    <p class="historial-title">
+      <i class="ti ti-history"></i> Historial de análisis
+    </p>
+    <div id="historial-lista"></div>
+  </div>
+
+  <script>
+    const input          = document.getElementById('csv-input');
+    const btn            = document.getElementById('upload-btn');
+    const fileName       = document.getElementById('file-name');
+    const workersSection = document.getElementById('workers-section');
+    const saveSection    = document.getElementById('save-section');
+    const saveBtn        = document.getElementById('save-btn');
+    const historialDiv   = document.getElementById('historial');
+    const historialLista = document.getElementById('historial-lista');
+    const uploadBox      = document.getElementById('upload-box');
+    const resultadoLabel = document.getElementById('resultado-label');
+
+    let currentFileName = '';
+    let lastResults     = {};
+    let itemActivoIndex = null;
+    let selectedFile    = null; // ← variable para guardar el archivo (drag o click)
+
+    // ─── Drag & Drop ─────────────────────────────────────
+    uploadBox.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadBox.classList.add('dragover');
+    });
+
+    uploadBox.addEventListener('dragleave', (e) => {
+      // Solo quitar si el mouse salió del uploadBox completamente
+      if (!uploadBox.contains(e.relatedTarget)) {
+        uploadBox.classList.remove('dragover');
+      }
+    });
+
+    uploadBox.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadBox.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.csv')) {
+        selectedFile    = file;          // ← guardamos en variable propia
+        currentFileName = file.name;
+        fileName.textContent = file.name;
+        btn.disabled = false;
+      } else if (file) {
+        fileName.textContent = 'Solo se aceptan archivos .csv';
+        fileName.style.color = '#9B2C2C';
+        setTimeout(() => {
+          fileName.textContent = 'Ningún archivo seleccionado';
+          fileName.style.color = '#185FA5';
+        }, 2000);
+      }
+    });
+
+    // Selección normal con explorador de archivos
+    input.addEventListener('change', () => {
+      if (input.files.length > 0) {
+        selectedFile    = input.files[0]; // ← también guardamos aquí
+        currentFileName = selectedFile.name;
+        fileName.textContent = currentFileName;
+        btn.disabled = false;
+      }
+    });
+
+    // ─── Envío del CSV al backend ─────────────────────────
+    btn.addEventListener('click', async () => {
+      const file = selectedFile; // ← usamos selectedFile, no input.files[0]
+      if (!file) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Enviando...';
+      saveSection.classList.add('hidden');
+      resultadoLabel.classList.add('hidden');
+      lastResults     = {};
+      itemActivoIndex = null;
+
+      workersSection.classList.remove('hidden');
+      ['promedios', 'totales', 'invalidos'].forEach((w, i) => {
+        const card = document.getElementById(`card-${w}`);
+        card.classList.remove('visible');
+        void card.offsetWidth;
+        setTimeout(() => card.classList.add('visible'), i * 120);
+        updateBadge(w, 'pendiente');
+        document.getElementById(`result-${w}`).innerHTML = '<p class="result-text">Esperando tarea...</p>';
+      });
+
+      renderHistorial();
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('http://localhost:8000/upload', { method: 'POST', body: formData });
+      const { task_id } = await res.json();
+
+      btn.innerHTML = '<i class="ti ti-loader"></i> Procesando...';
+
+      const sse = new EventSource(`http://localhost:8000/status/${task_id}`);
+      sse.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        ['promedios', 'totales', 'invalidos'].forEach(w => {
+          const info = data[w];
+          if (info) {
+            renderCard(w, info.status, info.result);
+            if (info.status === 'completada') lastResults[w] = info.result;
+          }
+        });
+
+        const allDone = ['promedios', 'totales', 'invalidos'].every(
+          w => ['completada', 'error'].includes(data[w]?.status)
+        );
+        if (allDone) {
+          sse.close();
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ti ti-upload"></i> Procesar CSV';
+          saveSection.classList.remove('hidden');
+        }
+      };
+    });
+
+    // ─── Guardar resultado en localStorage ───────────────
+    saveBtn.addEventListener('click', () => {
+      const entrada = {
+        archivo: currentFileName,
+        fecha: new Date().toLocaleString('es-MX'),
+        resultados: lastResults
+      };
+      const historial = JSON.parse(localStorage.getItem('csv_historial') || '[]');
+      historial.unshift(entrada);
+      localStorage.setItem('csv_historial', JSON.stringify(historial.slice(0, 10)));
+      saveSection.classList.add('hidden');
+      renderHistorial();
+    });
+
+    // ─── Mostrar resultado guardado desde historial ───────
+    function mostrarDesdeHistorial(index) {
+      const historial = JSON.parse(localStorage.getItem('csv_historial') || '[]');
+      const item = historial[index];
+      if (!item) return;
+
+      itemActivoIndex = index;
+      resultadoLabel.classList.remove('hidden');
+      workersSection.classList.remove('hidden');
+      saveSection.classList.add('hidden');
+
+      ['promedios', 'totales', 'invalidos'].forEach((w, i) => {
+        const card = document.getElementById(`card-${w}`);
+        card.classList.remove('visible');
+        void card.offsetWidth;
+        setTimeout(() => card.classList.add('visible'), i * 120);
+        updateBadge(w, 'completada');
+        const raw = item.resultados[w];
+        document.getElementById(`result-${w}`).innerHTML = raw
+          ? parseResult(w, raw)
+          : '<p class="result-text">Sin datos guardados</p>';
+      });
+
+      renderHistorial();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ─── Renderizar lista del historial ──────────────────
+    function renderHistorial() {
+      const historial = JSON.parse(localStorage.getItem('csv_historial') || '[]');
+      if (historial.length === 0) {
+        historialDiv.classList.add('hidden');
+        return;
+      }
+      historialDiv.classList.remove('hidden');
+      historialLista.innerHTML = historial.map((item, i) => {
+        const activo = i === itemActivoIndex ? 'activo' : '';
+        const badges = Object.keys(item.resultados).map(k => {
+          const label = { promedios: 'Promedios', totales: 'Totales', invalidos: 'Inválidos' }[k];
+          return `<span class="historial-badge">${label}</span>`;
+        }).join('');
+        return `<div class="historial-item ${activo}" onclick="mostrarDesdeHistorial(${i})">
+          <div class="historial-info">
+            <p><i class="ti ti-file-text" style="font-size:13px; margin-right:4px;"></i>${item.archivo}</p>
+            <span>${item.fecha}</span>
+          </div>
+          <div class="historial-right">
+            <div class="historial-badges">${badges}</div>
+            <button class="ver-btn" onclick="event.stopPropagation(); mostrarDesdeHistorial(${i})">
+              <i class="ti ti-eye" style="font-size:12px;"></i> Ver
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ─── Actualizar badge de estado ───────────────────────
+    function updateBadge(worker, status) {
+      const badge = document.getElementById(`badge-${worker}`);
+      badge.className = `status-badge status-${status.replace(' ', '-')}`;
+      if (status === 'en proceso') {
+        badge.innerHTML = `<span class="spinner"></span> en proceso`;
+      } else {
+        badge.textContent = status;
+      }
+    }
+
+    // ─── Parsear resultado del worker a HTML ──────────────
+    function parseResult(worker, raw) {
+      if (!raw) return '<p class="result-text">Sin resultado</p>';
+      try {
+        const match = raw.match(/\{(.+)\}/);
+        if (!match) return `<p class="result-text">${raw}</p>`;
+        const pairs = match[1].split(', ');
+        const isWarning = worker === 'invalidos';
+        return pairs.map((pair, idx) => {
+          const [k, v] = pair.split(': ');
+          const key    = k.replace(/'/g, '').trim();
+          const val    = v.replace(/'/g, '').trim();
+          const num    = parseFloat(val);
+          const display = isNaN(num) ? val : num.toLocaleString('es-MX');
+          // delay escalonado para animar cada fila al aparecer
+          return `<div class="result-row" style="animation-delay:${idx * 60}ms">
+            <span class="result-label">${key}</span>
+            <span class="result-value ${isWarning ? 'warning' : ''}">${display}</span>
+          </div>`;
+        }).join('');
+      } catch {
+        return `<p class="result-text">${raw}</p>`;
+      }
+    }
+
+    // ─── Actualizar contenido de tarjeta según estado ─────
+    function renderCard(worker, status, result) {
+      updateBadge(worker, status);
+      const box = document.getElementById(`result-${worker}`);
+      if (status === 'completada') {
+        box.innerHTML = parseResult(worker, result);
+      } else if (status === 'error') {
+        box.innerHTML = `<p class="result-text" style="color:#9B2C2C">${result}</p>`;
+      } else if (status === 'en proceso') {
+        box.innerHTML = '<p class="result-text">Procesando datos...</p>';
+      }
+    }
+
+    renderHistorial();
+  </script>
+
+</body>
+</html>
