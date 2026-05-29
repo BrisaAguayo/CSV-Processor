@@ -126,6 +126,8 @@ Redis actúa como intermediario entre el backend y los workers:
 2. Cada worker ejecuta un loop continuo haciendo `BRPOP` sobre la lista `tasks`, lo que significa que **espera bloqueado** hasta que llegue una tarea.
 3. Cuando llega una tarea, el worker la toma, actualiza el estado a `en proceso` en un hash Redis (`status:{task_id}:{worker_type}`), procesa el CSV y finalmente actualiza el estado a `completada` con el resultado.
 4. El backend tiene un endpoint SSE que consulta esos hashes cada segundo y transmite el estado al navegador en tiempo real.
+<img width="1093" height="632" alt="image" src="https://github.com/user-attachments/assets/9668bba5-6325-4ad5-9e07-1c6a503fb8cd" />
+
 
 ---
 
